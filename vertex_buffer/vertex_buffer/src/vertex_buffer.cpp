@@ -38,10 +38,16 @@ int main(void)
     //定义顶点缓冲区
     unsigned int buffer;
     glGenBuffers(1,&buffer);
-    //选择顶点缓冲区
+    //绑定顶点缓冲区
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
     //缓冲区放入数据
     glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
+    //配置顶点属性
+    glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,sizeof(float)*2,0);
+    glEnableVertexAttribArray(0);
+
+    //解绑顶点缓冲区
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
