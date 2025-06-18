@@ -3,6 +3,66 @@
 
 #include<iostream>
 
+static unsigned int ConpileShader(unsigned int type, const std::string& source) {
+    unsigned int id = glCreateShader(type);
+    const char* src = source.c_str();
+    //将 GLSL 源代码关联到着色器对象(这里指顶点着色器和片段着色器的代码) 
+    glShaderSource(id, 1, &src, nullptr);
+    //编译GLSL代码为GPU指令
+    glCompileShader(id);
+
+    //TODO:error handling
+    //获取着色器对象（shader object）的相关参数信息
+    int result;
+    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
+    //判断 如果错了就获取错误信息
+    if (result == GL_FALSE) {
+        //获取错误信息长度
+        int length;
+        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
+        //char message[length];
+        //char* message = new char[length];
+        char* message = (char*)alloca(length * sizeof(char));
+        //获取log
+        glGetShaderInfoLog(id, length, &length, message);
+        std::cout << "Failed to compile"<<
+            (type == GL_VERTEX_SHADER ?"vertex" :"fragment")
+            << "shader! " << std::endl;
+        std::cout << message << std::endl;
+        glDeleteShader(id);
+        return 0;
+    }
+
+    return id;
+}
+
+
+static unsigned int CreateShader(const std::string& vetexShader,const std::string& fragmentShader) {
+    //编写编译这两个着色器所需的代码:
+    //创建一个新的着色器程序对象
+    unsigned int program = glCreateProgram();
+
+    //创建着色器对象
+    unsigned int vetexS = ConpileShader(GL_VERTEX_SHADER, vetexShader);
+    unsigned int fragmentS = ConpileShader(GL_FRAGMENT_SHADER,fragmentShader);
+
+    //着色器对象放入着色器程序对象
+    glAttachShader(program, vetexS);
+    glAttachShader(program, fragmentS);
+
+    //连接到程序
+    glLinkProgram(program);
+    //验证着色器程序在当前 OpenGL 状态下的有效性
+    glValidateProgram(program);
+
+    //删除已创建的着色器对象，因为已经存放到着色器程序对象中了
+    glDeleteShader(vetexS);
+    glDeleteShader(fragmentS);
+
+    return program;
+
+}
+
 int main(void)
 {
     GLFWwindow* window;
@@ -42,12 +102,40 @@ int main(void)
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
     //缓冲区放入GPU数据
     glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-    //配置顶点属性
+    //配置顶点属性(指定顶点缓冲区的布局并把这些属性绑定到索引0)
     glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,sizeof(float)*2,0);
     glEnableVertexAttribArray(0);
 
     //解绑顶点缓冲区
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    
+    //编写顶点着色器
+    std::string vertexShader =
+        "#version 330 core\n"
+        "\n"
+        "layout(location = 0) in vec4 position;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   gl_Position = position;\n"
+        "}\n";
+
+    //编写片段着色器
+    std::string fragmentShader =
+        "#version 330 core\n"
+        "\n"
+        "layout(location = 0) out vec4 color;\n"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   color = vec4(1.0,0.0,0.0,1.0);\n"
+        "}\n";
+
+    //调用自定义编译着色器代码
+    unsigned int shader = CreateShader(vertexShader,fragmentShader);
+    //绑定着色器(指定当前要使用的着色器程序)
+    glUseProgram(shader);
+
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
