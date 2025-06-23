@@ -2,6 +2,40 @@
 #include <GLFW/glfw3.h>
 
 #include<iostream>
+#include<fstream>
+#include<string>
+#include<sstream>
+
+struct ShaderProgramSouces {
+    std::string VertexSource;
+    std::string FragmentSouces;
+};
+
+static ShaderProgramSouces ParseShader(const std::string& filepath) {
+    std::ifstream stream(filepath);
+    
+    enum class ShaderType {
+        NONE = -1, VERTEX = 0, FRAGMENT = 1
+    };
+
+    std::string line;
+    std::stringstream ss[2];
+    ShaderType type = ShaderType::NONE;
+    while (getline(stream, line)) {
+        if (line.find("#shader") != std::string::npos) {
+            if (line.find("vertex") != std::string::npos)
+                //设置模式为顶点
+                type = ShaderType::VERTEX;
+            else if(line.find("fragment")!= std::string::npos)
+                //设置片段模式
+                type = ShaderType::FRAGMENT;
+        }
+        else if (type != ShaderType::NONE){
+            ss[(int)type] << line << '\n';
+        }
+    }
+    return {ss[0].str(),ss[1].str()};
+}
 
 static unsigned int ConpileShader(unsigned int type, const std::string& source) {
     unsigned int id = glCreateShader(type);
@@ -25,9 +59,9 @@ static unsigned int ConpileShader(unsigned int type, const std::string& source) 
         char* message = (char*)alloca(length * sizeof(char));
         //获取log
         glGetShaderInfoLog(id, length, &length, message);
-        std::cout << "Failed to compile"<<
-            (type == GL_VERTEX_SHADER ?"vertex" :"fragment")
-            << "shader! " << std::endl;
+        std::cout << "Failed to compile "<<
+            (type == GL_VERTEX_SHADER ?"vertex" : "fragment")
+            <<"shader!"<< std::endl;
         std::cout << message << std::endl;
         glDeleteShader(id);
         return 0;
@@ -84,7 +118,7 @@ int main(void)
     glfwMakeContextCurrent(window);
 
     if (glewInit() != GLEW_OK)
-        std::cout << "Error!" << std::endl;
+        std::cout << "Error!"<< std::endl;
 
     std::cout << glGetString(GL_VERSION) << std::endl;
 
@@ -109,30 +143,9 @@ int main(void)
     //解绑顶点缓冲区
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
     
-    //编写顶点着色器
-    std::string vertexShader =
-        "#version 330 core\n"
-        "\n"
-        "layout(location = 0) in vec4 position;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   gl_Position = position;\n"
-        "}\n";
-
-    //编写片段着色器
-    std::string fragmentShader =
-        "#version 330 core\n"
-        "\n"
-        "layout(location = 0) out vec4 color;\n"
-        "\n"
-        "void main()\n"
-        "{\n"
-        "   color = vec4(1.0,0.0,0.0,1.0);\n"
-        "}\n";
-
+    ShaderProgramSouces source = ParseShader("res/shaders/Basic.shader");
     //调用自定义编译着色器代码
-    unsigned int shader = CreateShader(vertexShader,fragmentShader);
+    unsigned int shader = CreateShader(source.VertexSource,source.FragmentSouces);
     //绑定着色器(指定当前要使用的着色器程序)
     glUseProgram(shader);
 
@@ -157,6 +170,8 @@ int main(void)
         /* Poll for and process events */
         glfwPollEvents();
     }
+    //删除着色器
+    glDeleteProgram(shader);
 
     glfwTerminate();
     return 0;
