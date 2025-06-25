@@ -6,6 +6,30 @@
 #include<string>
 #include<sstream>
 
+#define ASSERT(x) if(!(x)) __debugbreak();
+#define GLCall(x) GLClearError();\
+    x;\
+    ASSERT(GLLogCall(#x,__FILE__,__LINE__))
+
+static void GLClearError() {
+    while (glGetError() != GL_NO_ERROR);
+}
+
+static void GLcheckError() {
+    while (GLenum error = glGetError()) {
+        std::cout << "[OpenGL ERror] ( " << error << " )" << std::endl;
+    }
+}
+
+static bool GLLogCall(const char* function,const char* file,int line) {
+    while (GLenum error = glGetError()) {
+        std::cout << "[OpenGL ERror] ( " << error << " ): " 
+            <<function<<" " << file<<": " << line << std::endl;
+        return false;
+    }
+    return true;
+}
+
 struct ShaderProgramSouces {
     std::string VertexSource;
     std::string FragmentSouces;
@@ -180,8 +204,11 @@ int main(void)
         glEnd();*/
 
         //glDrawArrays(GL_TRIANGLES, 0, 6);
-        glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,nullptr);
 
+        //GLClearError();
+        GLCall(glDrawElements(GL_TRIANGLES,6,GL_INT,nullptr));
+        //GLcheckError();
+        //ASSERT(GLLogCall());
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
